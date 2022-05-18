@@ -20,7 +20,8 @@ public final class NumberExtensionUtils {
      * 误差， java 数字计算是有误差的
      */
     private static final double ERROR_ACCURACY = 0.00000005;
-
+    private static final String EMPTY_PLACE_HOLDER = "--";
+    private static final double EPSILON = 0.00000001;
     private NumberExtensionUtils() {
     }
 
@@ -179,4 +180,64 @@ public final class NumberExtensionUtils {
         }
         return o1 == one ? Optional.of((int) o2) : Optional.of((int) o1);
     }
+
+    /**
+     * 判断数字是否是空
+     *
+     * @param number 价格
+     * @return 价格数据是否为空
+     */
+    public static boolean isNullOrZero(final Number number) {
+        if (Objects.isNull(number)) {
+            return true;
+        }
+        if (number instanceof BigDecimal) {
+            return BigDecimal.ZERO.compareTo((BigDecimal) number) == 0;
+        }
+        if (number instanceof Integer) {
+            return Integer.valueOf(0).compareTo((Integer) number) == 0;
+        }
+        if (number instanceof Long) {
+            return Long.valueOf(0).compareTo((Long) number) == 0;
+        }
+        if (number instanceof Short) {
+            return number.shortValue() == 0;
+        }
+        if (number instanceof Double) {
+            return Math.abs(number.doubleValue()) < EPSILON;
+        }
+        if (number instanceof Float) {
+            return Math.abs(number.floatValue()) < EPSILON;
+        }
+        return false;
+    }
+
+    /**
+     * 获取值
+     *
+     * @param valueStr 值字符串
+     * @return 值
+     */
+    @SuppressWarnings("squid:S1166")
+    public static Optional<BigDecimal> getValue(String valueStr) {
+        try {
+            if (StringUtils.isBlank(valueStr)) {
+                return Optional.empty();
+            }
+            // 防止出现空格导致转化失败
+            String useValue = valueStr.trim();
+            String emptyPlaceHolder1 = "-";
+            String emptyPlaceHolder3 = "---";
+            if (emptyPlaceHolder1.equals(valueStr)
+                    || EMPTY_PLACE_HOLDER.equals(valueStr)
+                    || emptyPlaceHolder3.equals(valueStr)) {
+                return Optional.empty();
+            }
+            BigDecimal value = new BigDecimal(useValue);
+            return Optional.of(value);
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
 }
