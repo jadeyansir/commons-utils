@@ -37,6 +37,19 @@ public final class BigDecimalUtils {
     }
 
     /**
+     * 亿 --> 万 转换
+     *
+     * @param sourceData 原始数据
+     * @return 转换后数据
+     */
+    public static Optional<BigDecimal> convertBillionToW(BigDecimal sourceData) {
+        if (Objects.isNull(sourceData)) {
+            return Optional.empty();
+        }
+        return Optional.of(sourceData.multiply(WAN_AND_BILLION_CONVERT_RATIO));
+    }
+
+    /**
      * 万 --> 亿 转换
      *
      * @param sourceData 原始数据
@@ -204,4 +217,31 @@ public final class BigDecimalUtils {
     }
 
 
+    /**
+     * BigDeciaml 类型安全比较，防止空指针异常
+     * <p>
+     * number1 和 number2 进行比较。
+     * 1 number1== null && number2 ！= null  return -1
+     * 2 number1 != null && number2 == null  return 1
+     * 3 number1 == null && number2 == null return 0
+     * 4 number1 < number2 return -1
+     * 5 number1 > number2 return 1
+     * 6 number1 == number2 return 0
+     *
+     * @param number1 数值1
+     * @param number2 数值2
+     * @return number1 和 number2 比较的结果
+     */
+    public static Integer safeCompare(BigDecimal number1, BigDecimal number2) {
+        if (Objects.isNull(number1) && Objects.isNull(number2)) {
+            return 0;
+        }
+        if (Objects.nonNull(number1) && Objects.nonNull(number2)) {
+            return number1.compareTo(number2);
+        }
+        if (Objects.nonNull(number1)) {
+            return 1;
+        }
+        return -1;
+    }
 }

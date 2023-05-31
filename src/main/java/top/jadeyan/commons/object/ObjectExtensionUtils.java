@@ -1,5 +1,7 @@
 package top.jadeyan.commons.object;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
@@ -12,7 +14,6 @@ import java.util.function.Function;
  * @author yan
  */
 public final class ObjectExtensionUtils {
-
     private ObjectExtensionUtils() {
         // hide construct
     }
@@ -217,5 +218,41 @@ public final class ObjectExtensionUtils {
         if (Objects.nonNull(value)) {
             consumer.accept(value);
         }
+    }
+
+    /**
+     * 判断多个值都为空
+     *
+     * @param values 多个值
+     * @return {@link Boolean} 是否都为空
+     */
+    public static Boolean isAllEmpty(Object... values) {
+        if (ArrayUtils.isEmpty(values)) {
+            return true;
+        }
+        for (Object value : values) {
+            if (ObjectUtils.isNotEmpty(value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 判断多个值都不为空
+     *
+     * @param values 多个值
+     * @return {@link Boolean} 是否都不为空
+     */
+    public static Boolean isAllNotEmpty(Object... values) {
+        if (ArrayUtils.isEmpty(values)) {
+            return false;
+        }
+        for (Object value : values) {
+            if (ObjectUtils.isEmpty(value)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

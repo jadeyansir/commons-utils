@@ -5,30 +5,34 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
-
-import static top.jadeyan.commons.object.NumberExtensionUtils.isNullOrZero;
+import java.util.Objects;
 
 /**
- * 显示带百分号序列化
+ * 十分制转换 保留一位小数
  *
  * @author yan
- * @create 2022/2/23
+ * @date 2022/11/30
  */
-public class DisplayPercentJsonSerializer extends JsonSerializer<Number> {
+public class TenPointScale1JsonSerializer extends JsonSerializer<Number> {
+
     private static final String EMPTY_PLACEHOLDER = "--";
+    private static final BigDecimal TEN = new BigDecimal(10);
 
     @Override
     public void serialize(Number number, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-        String displayStr = getDisplayString(number);
+        String displayStr = this.getDisplayString(number);
         jsonGenerator.writeString(displayStr);
     }
 
-    private String getDisplayString(final Number number) {
-        if (isNullOrZero(number)) {
+    String getDisplayString(Number number) {
+        if (Objects.isNull(number)) {
             return EMPTY_PLACEHOLDER;
+        } else {
+            DecimalFormat df = new DecimalFormat("0.0");
+            return df.format(new BigDecimal(number.toString()).divide(TEN, 1, RoundingMode.HALF_UP));
         }
-        DecimalFormat df = new DecimalFormat("0.00##");
-        return df.format(number) + "%";
     }
 }

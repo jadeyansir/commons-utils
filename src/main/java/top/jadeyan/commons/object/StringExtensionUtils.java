@@ -253,4 +253,25 @@ public final class StringExtensionUtils {
         }
         return StringUtils.replaceEach(str.trim(), new String[]{"（", "）", "【", "】", "，"}, new String[]{"(", ")", "[", "]", ","}).replaceAll(MEANINGLESS_CHARS, EMPTY);
     }
+
+    /**
+     * 搜索关键字限制, 页面传入关键字大于100个时候，取前面100个
+     */
+    private static final int KEYWORD_CHAR_HUNDRED = 100;
+
+    /**
+     * 截取前100个字符, 为空返回空字符串
+     *
+     * @param inputString 输入关键字
+     * @return 前100个字符
+     */
+    public static String cutOutHundredLengthString(String inputString) {
+        // 不修改入参，新建一个字符串
+        String searchKeyWord = StringUtils.isBlank(inputString) ? "" : inputString.trim();
+        if (StringUtils.isNotBlank(searchKeyWord) && searchKeyWord.length() > KEYWORD_CHAR_HUNDRED) {
+            searchKeyWord = searchKeyWord.substring(0, KEYWORD_CHAR_HUNDRED);
+        }
+        return searchKeyWord;
+    }
+
 }

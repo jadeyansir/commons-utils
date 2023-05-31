@@ -10,8 +10,8 @@ import java.util.Objects;
 /**
  * Long 转 string
  *
- * @author wuyh
- * @date 2021/09/13
+ * @author yan
+ * @date 2020/03/25
  **/
 public class LongToStringJsonSerializer extends JsonSerializer<Long> {
     @Override

@@ -6,16 +6,17 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
-
-import static top.jadeyan.commons.object.NumberExtensionUtils.isNullOrZero;
+import java.util.Objects;
 
 /**
- * 显示带百分号序列化
+ * 显示bigDecimal json序列化, 保留两位/千分位
+ * 去除当数值为0时，返回--
  *
  * @author yan
- * @create 2022/2/23
+ * @date 2022/09/26
  */
-public class DisplayPercentJsonSerializer extends JsonSerializer<Number> {
+public class Number4ScaleThousandthsJsonSerializer extends JsonSerializer<Number> {
+
     private static final String EMPTY_PLACEHOLDER = "--";
 
     @Override
@@ -24,11 +25,12 @@ public class DisplayPercentJsonSerializer extends JsonSerializer<Number> {
         jsonGenerator.writeString(displayStr);
     }
 
-    private String getDisplayString(final Number number) {
-        if (isNullOrZero(number)) {
+    String getDisplayString(final Number number) {
+        if (Objects.isNull(number)) {
             return EMPTY_PLACEHOLDER;
         }
-        DecimalFormat df = new DecimalFormat("0.00##");
-        return df.format(number) + "%";
+        DecimalFormat df = new DecimalFormat("##,##0.0000");
+        return df.format(number);
     }
+
 }

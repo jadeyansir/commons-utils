@@ -10,8 +10,8 @@ import java.io.IOException;
 /**
  * 显示String json序列化
  *
- * @author wuyh
- * @date 2021/09/13
+ * @author yan
+ * @date 2020/03/25
  **/
 public class DisplayStringJsonSerializer extends JsonSerializer<String> {
     private static final String EMPTY_PLACEHOLDER = "--";

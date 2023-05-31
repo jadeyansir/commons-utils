@@ -4,10 +4,15 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.lang3.time.DateUtils;
 
+import javax.validation.constraints.NotNull;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Objects;
@@ -256,6 +261,81 @@ public final class DateExtensionUtils {
             currentDate = currentDate.plusMonths(1);
         }
         return count;
+    }
+
+    /**
+     * 获取日期所属的周一
+     *
+     * @param date 日期
+     * @return 获取日期所属周一
+     */
+    public static Date getMondayOfDate(@NotNull Date date) {
+        LocalDate localDate = date.toLocalDate();
+        return Date.valueOf(localDate.with(DayOfWeek.MONDAY));
+    }
+
+    /**
+     * 根据日期获取月份数据 格式 yyyyMM
+     *
+     * @param date 日期
+     * @return 年+月 yyyyMM 如：202201 代表 202201 月
+     */
+    public static Integer getMonthNumOfDate(@NotNull Date date) {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(FORMAT_MONTH_NUM);
+        return Integer.valueOf(date.toLocalDate().format(dateTimeFormatter));
+    }
+
+    /**
+     * 一个季度的月跨度
+     */
+    private static final Integer QUARTER_MONTH_SPAN = 3;
+
+    /**
+     * 年季度组合年的权重
+     */
+    private static final Integer QUARTER_YEAR_WEIGHT = 100;
+
+    /**
+     * 根据日期获取季度数据 格式 yyyy * 100 + [季度： 1: 1季度;2: 2季度；3:3 季度；4: 4季度]
+     * 示例： 2022 年 1 季度， 2 季度， 3 季度， 4 季度分别表示为： 202201， 202202，202203,202204
+     *
+     * @param date 日期
+     * @return yyyy * 100 + 季度
+     */
+    public static Integer getQuarterNumOfDate(@NotNull Date date) {
+        LocalDate localDate = date.toLocalDate();
+        int month = (localDate.getMonthValue() - 1) / QUARTER_MONTH_SPAN + 1;
+        return localDate.getYear() * QUARTER_YEAR_WEIGHT + month;
+    }
+
+    /**
+     * 获取日期的年
+     *
+     * @param date 日期
+     * @return 当前日期所属年
+     */
+    public static Integer getYearOfDate(@NotNull Date date) {
+        return date.toLocalDate().getYear();
+    }
+
+
+    /**
+     * 获取当天剩余的毫秒数
+     *
+     * @return Millis
+     */
+    public static long getTodayRemainingMillis() {
+        LocalDateTime midnight = LocalDateTime.now().plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        return ChronoUnit.MILLIS.between(LocalDateTime.now(), midnight);
+    }
+
+    /**
+     * 获取当天剩余的纳秒数
+     *
+     * @return Nanos
+     */
+    public static long getTodayRemainingNanos() {
+        return TimeUnit.MILLISECONDS.toNanos(DateExtensionUtils.getTodayRemainingMillis());
     }
 
 }

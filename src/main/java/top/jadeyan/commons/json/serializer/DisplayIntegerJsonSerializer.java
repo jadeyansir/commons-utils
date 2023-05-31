@@ -5,30 +5,28 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
-import java.text.DecimalFormat;
 
 import static top.jadeyan.commons.object.NumberExtensionUtils.isNullOrZero;
 
 /**
- * 显示带百分号序列化
+ * 显示Integer json序列化
  *
  * @author yan
- * @create 2022/2/23
- */
-public class DisplayPercentJsonSerializer extends JsonSerializer<Number> {
+ * @date 2020/03/25
+ **/
+public class DisplayIntegerJsonSerializer extends JsonSerializer<Integer> {
     private static final String EMPTY_PLACEHOLDER = "--";
 
     @Override
-    public void serialize(Number number, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(Integer number, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         String displayStr = getDisplayString(number);
         jsonGenerator.writeString(displayStr);
     }
 
-    private String getDisplayString(final Number number) {
+    private String getDisplayString(final Integer number) {
         if (isNullOrZero(number)) {
             return EMPTY_PLACEHOLDER;
         }
-        DecimalFormat df = new DecimalFormat("0.00##");
-        return df.format(number) + "%";
+        return number + "";
     }
 }
