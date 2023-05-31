@@ -239,5 +239,23 @@ public final class DateExtensionUtils {
     public static Timestamp addDays(Timestamp date, int addDays) {
         return new Timestamp(DateUtils.addDays(date, addDays).getTime());
     }
+    /**
+     * 计算两个日期之间有多少个闰年月份，即2.29出现的次数
+     *
+     * @param startDate 开始日期
+     * @param endDate   结束日期
+     * @return 出现次数
+     */
+    private int countLeapYearMonths(LocalDate startDate, LocalDate endDate) {
+        int count = 0;
+        LocalDate currentDate = startDate;
+        while (currentDate.isBefore(endDate) || currentDate.equals(endDate)) {
+            if (currentDate.isLeapYear() && currentDate.getMonthValue() == 2) {
+                count++;
+            }
+            currentDate = currentDate.plusMonths(1);
+        }
+        return count;
+    }
 
 }

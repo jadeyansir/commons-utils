@@ -13,6 +13,8 @@ import java.util.StringJoiner;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+
 /**
  * 字符串扩展工具类
  *
@@ -20,7 +22,12 @@ import java.util.stream.Collectors;
  */
 public final class StringExtensionUtils {
 
+
     private static final String DOMAIN_PREFIX = "www.";
+
+    public static final String DEFAULT_EMPTY = "--";
+
+    public static final String MEANINGLESS_CHARS = "\\s*|\r|\n|\t";
 
     private StringExtensionUtils() {
         // hide construct
@@ -188,8 +195,9 @@ public final class StringExtensionUtils {
 
     /**
      * 多个字符串有序拼接成一个字符串
-     * @param stringList    字符串
-     * @return  拼接后字符串
+     *
+     * @param stringList 字符串
+     * @return 拼接后字符串
      */
     public static String listToString(List<String> stringList) {
         if (CollectionUtils.isEmpty(stringList)) {
@@ -201,8 +209,9 @@ public final class StringExtensionUtils {
 
     /**
      * 检查多个字符串是否都不为空 或长度为0 或由空白符构成
-     * @param strings  字符串数组
-     * @return  是否都不为空
+     *
+     * @param strings 字符串数组
+     * @return 是否都不为空
      */
     public static boolean allNotBlank(String... strings) {
         if (ArrayUtils.isEmpty(strings)) {
@@ -214,5 +223,34 @@ public final class StringExtensionUtils {
             }
         }
         return true;
+    }
+
+    /**
+     * 将多个key组合为一个key字符串
+     *
+     * @param delimiter the sequence of characters to be used between each
+     *                  element added to the {@code StringJoiner} value
+     * @param keys      多个key值
+     * @return 组合生成的key字符串
+     */
+    public static String complexKey(CharSequence delimiter, Object... keys) {
+        StringJoiner joiner = new StringJoiner(delimiter);
+        for (Object key : keys) {
+            joiner.add(null == key ? null : key.toString());
+        }
+        return joiner.toString();
+    }
+
+    /**
+     * 将字符串中的特殊空格替换掉, 目前主要是中文括号替换成英文括号
+     *
+     * @param str 待处理文本
+     * @return 处理后文本
+     */
+    public static String replaceNameSpecialChar(String str) {
+        if (StringUtils.isBlank(str)) {
+            return DEFAULT_EMPTY;
+        }
+        return StringUtils.replaceEach(str.trim(), new String[]{"（", "）", "【", "】", "，"}, new String[]{"(", ")", "[", "]", ","}).replaceAll(MEANINGLESS_CHARS, EMPTY);
     }
 }
