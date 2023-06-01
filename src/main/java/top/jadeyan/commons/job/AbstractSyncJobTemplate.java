@@ -1,15 +1,19 @@
 package top.jadeyan.commons.job;
 
+import com.github.pagehelper.PageInfo;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Resource;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
 /**
@@ -106,6 +110,93 @@ public abstract class AbstractSyncJobTemplate {
         return effectRows;
     }
 
+    /**
+     * 分页增量同步数据（通过分页处理，避免重复操作，避免数据丢失）
+     *
+     * @param lastSyncIncrementMark                  最后一次同步成功的刻度
+     * @param pageSize                               每次查询的页数
+     * @param searchDataFunction                     查询的function 参数：定时任务增量参数 返回值：分页数据
+     * @param searchUpdateTimeFieldFunction          获取时间字段值的函数
+     * @param searchIdFieldFunction                  获取增量id字段值的函数
+     * @param dealingDataFunction                    处理数据的function
+     * @param saveSyncIncrementMarkForEveryRecursive 每批数据保存的时候是否更新增量刻度
+     * @param <R>                                    查询的返回参数
+     * @return 影响的行数
+     */
+    public <R> int syncIncrementTemplateByPage(String lastSyncIncrementMark, Integer pageSize,
+                                               Function<SyncIncrementTemplateParamBO, PageInfo<R>> searchDataFunction,
+                                               Function<R, Timestamp> searchUpdateTimeFieldFunction,
+                                               ToLongFunction<R> searchIdFieldFunction, ToIntFunction<List<R>> dealingDataFunction,
+                                               boolean saveSyncIncrementMarkForEveryRecursive) {
+        int effectRows = 0;
+        Timestamp lastUpdateTime = new Timestamp(0);
+        long lastUpdateTimeMaxId = 0L;
+        long lastUpdateTimeSize = 0L;
+        //String lastUpdateTimeStr = internalKeyValueService.getValue(lastSyncIncrementMark);
+        String lastUpdateTimeStr = "";
+        // 处理库里面的值
+        if (StringUtils.isBlank(lastUpdateTimeStr)) {
+            saveKeyAndValue(lastSyncIncrementMark, lastUpdateTime, lastUpdateTimeSize);
+        } else {
+            String[] updateInfo = lastUpdateTimeStr.split("-");
+            lastUpdateTime = new Timestamp(Long.parseLong(Optional.of(updateInfo).filter(x -> x.length > 0)
+                    .map(x -> updateInfo[0]).orElse(lastUpdateTimeStr)));
+            lastUpdateTimeSize = Optional.of(updateInfo).filter(x -> x.length > 1).map(x -> x[1])
+                    .filter(StringUtils::isNotBlank).map(Long::parseLong).orElse(0L);
+        }
+        // 最新时间的总条数
+        PageInfo<R> dataPage = searchDataFunction.apply(SyncIncrementTemplateParamBO.build(lastUpdateTime,
+                false, lastUpdateTimeMaxId, true, 1));
+        long lastUpdateSize = dataPage.getTotal();
+        Timestamp selectLastUpdateTime = Optional.ofNullable(dataPage.getList()).filter(CollectionUtils::isNotEmpty).map(x -> x.get(0))
+                .map(searchUpdateTimeFieldFunction).orElse(lastUpdateTime);
+        // 如果最新时间的数据不变不进行再次处理
+        if (Objects.equals(lastUpdateTimeSize, lastUpdateSize) && Objects.equals(lastUpdateTime, selectLastUpdateTime)) {
+            logger.info("{} 最后一次更新：{} 数据为：{} 没有变化，不进行操作", lastSyncIncrementMark, lastUpdateTime, lastUpdateTimeSize);
+            return 0;
+        }
+        lastUpdateTimeSize = 0L;
+        Integer fetchCount = null;
+        while (Objects.isNull(fetchCount) || pageSize.equals(fetchCount)) {
+            logger.info("key:{}, lastUpdateTime: {}, lastUpdateTimeMaxId: {}", lastSyncIncrementMark, lastUpdateTime, lastUpdateTimeMaxId);
+            List<R> dataList = searchDataFunction.apply(SyncIncrementTemplateParamBO.build(lastUpdateTime,
+                    true, lastUpdateTimeMaxId, false, pageSize)).getList();
+            fetchCount = dataList.size();
+            Timestamp currentMaxUpdateTime = dataList.stream().map(searchUpdateTimeFieldFunction).max(Timestamp::compareTo)
+                    .orElse(lastUpdateTime);
+            int lastUpdateTimeCount = (int) dataList.stream().map(searchUpdateTimeFieldFunction)
+                    .filter(x -> Objects.equals(x, currentMaxUpdateTime)).count();
+            if (Objects.equals(lastUpdateTime, currentMaxUpdateTime)) {
+                lastUpdateTimeSize += lastUpdateTimeCount;
+            } else {
+                lastUpdateTimeSize = lastUpdateTimeCount;
+            }
+            lastUpdateTime = currentMaxUpdateTime;
+            lastUpdateTimeMaxId = dataList.stream().filter(x -> searchUpdateTimeFieldFunction.apply(x).compareTo(currentMaxUpdateTime) == 0)
+                    .mapToLong(searchIdFieldFunction).max().orElse(lastUpdateTimeMaxId);
+            effectRows += dealingDataFunction.applyAsInt(dataList);
+            if (Objects.equals(saveSyncIncrementMarkForEveryRecursive, Boolean.TRUE)) {
+                saveKeyAndValue(lastSyncIncrementMark, lastUpdateTime, 0L);
+            }
+        }
+        saveKeyAndValue(lastSyncIncrementMark, lastUpdateTime, lastUpdateTimeSize);
+        return effectRows;
+    }
+
+    /**
+     * 保存最新更新记录
+     *
+     * @param key           key
+     * @param time          更新时间
+     * @param lastUpdateNum 最新数据条数
+     */
+    private void saveKeyAndValue(String key, Timestamp time, Long lastUpdateNum) {
+        InternalKeyValueRequestDTO internalKeyValueRequestDTO = new InternalKeyValueRequestDTO();
+        internalKeyValueRequestDTO.setKey(key);
+        internalKeyValueRequestDTO.setValue(String.format("%s-%s", time.getTime(),
+                ObjectUtils.defaultIfNull(lastUpdateNum, "")));
+        //internalKeyValueService.saveKeyValue(internalKeyValueRequestDTO);
+    }
 
     /**
      * 全量同步数据

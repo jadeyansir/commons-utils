@@ -53,6 +53,23 @@
             <artifactId>sharding-jdbc-core</artifactId>
             <version>4.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>3.0.2</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- page helper -->
+        <dependency>
+            <groupId>com.github.pagehelper</groupId>
+            <artifactId>pagehelper</artifactId>
+            <version>5.1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.pagehelper</groupId>
+            <artifactId>pagehelper-spring-boot-starter</artifactId>
+            <version>1.2.12</version>
+        </dependency>
         <!--  &lt;!&ndash; https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-javadoc-plugin &ndash;&gt;
           <dependency>
               <groupId>org.apache.maven.plugins</groupId>

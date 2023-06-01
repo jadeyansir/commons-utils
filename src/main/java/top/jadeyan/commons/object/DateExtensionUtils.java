@@ -3,6 +3,7 @@ package top.jadeyan.commons.object;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.lang3.time.DateUtils;
+import top.jadeyan.commons.enums.QuarterEnum;
 
 import javax.validation.constraints.NotNull;
 import java.sql.Date;
@@ -11,13 +12,12 @@ import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Objects;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.List;
 
 /**
  * 日期扩展工具
@@ -30,6 +30,24 @@ public final class DateExtensionUtils {
         // hide constructor
     }
 
+    /**
+     * 季度第一个月和最后一个月之间的差值
+     */
+    private static final int QUARTER_DIFF_MONTHS = 2;
+
+    /**
+     * 一个季度有的月份
+     */
+    private static final int MONTHS_OF_QUARTER = 3;
+    /**
+     * 一个季度的月跨度
+     */
+    private static final Integer QUARTER_MONTH_SPAN = 3;
+
+    /**
+     * 年季度组合年的权重
+     */
+    private static final Integer QUARTER_YEAR_WEIGHT = 100;
     /**
      * format yyyyMMddHHmmss
      */
@@ -244,6 +262,7 @@ public final class DateExtensionUtils {
     public static Timestamp addDays(Timestamp date, int addDays) {
         return new Timestamp(DateUtils.addDays(date, addDays).getTime());
     }
+
     /**
      * 计算两个日期之间有多少个闰年月份，即2.29出现的次数
      *
@@ -284,16 +303,6 @@ public final class DateExtensionUtils {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(FORMAT_MONTH_NUM);
         return Integer.valueOf(date.toLocalDate().format(dateTimeFormatter));
     }
-
-    /**
-     * 一个季度的月跨度
-     */
-    private static final Integer QUARTER_MONTH_SPAN = 3;
-
-    /**
-     * 年季度组合年的权重
-     */
-    private static final Integer QUARTER_YEAR_WEIGHT = 100;
 
     /**
      * 根据日期获取季度数据 格式 yyyy * 100 + [季度： 1: 1季度;2: 2季度；3:3 季度；4: 4季度]
@@ -338,4 +347,231 @@ public final class DateExtensionUtils {
         return TimeUnit.MILLISECONDS.toNanos(DateExtensionUtils.getTodayRemainingMillis());
     }
 
+    /**
+     * 获取开始日期和结束日期之间的 所有年的列表
+     *
+     * @param startDate 开始日期
+     * @param endDate   结束日期
+     * @return 所有年的列表
+     */
+    public static List<String> getYearList(@NotNull Date startDate, @NotNull Date endDate) {
+        checkDateNotNull(startDate, endDate);
+        int startYear = startDate.toLocalDate().getYear();
+        int endYear = endDate.toLocalDate().getYear();
+        List<String> yearList = new ArrayList<>();
+        for (int year = startYear; year <= endYear; year++) {
+            yearList.add(String.valueOf(year));
+        }
+        return yearList;
+    }
+
+    /**
+     * 获取两个日期之间的季度字符串列表。 季度格式，如： 2020-Q1
+     *
+     * @param startDate 开始日期
+     * @param endDate   结束日日期
+     * @return 季度字符串列表
+     */
+    public static List<String> getQuarterList(@NotNull Date startDate, @NotNull Date endDate) {
+        checkDateNotNull(startDate, endDate);
+        LocalDate startLocalDate = getFirstDayOfQuarter(startDate).toLocalDate();
+        LocalDate endLocalDate = getFirstDayOfQuarter(endDate).toLocalDate();
+        List<String> quarterList = new ArrayList<>();
+
+        for (LocalDate localDate = startLocalDate.plusDays(0); localDate.compareTo(endLocalDate) <= 0;
+             localDate = localDate.plusMonths(MONTHS_OF_QUARTER)) {
+            quarterList.add(getYearQuarterByDate(Date.valueOf(localDate)));
+        }
+        return quarterList;
+    }
+
+    /**
+     * 获取两个日期之间的所有月份字符串列表
+     *
+     * @param startDate 开始日期
+     * @param endDate   结束日期
+     * @return 日期之间的每月字符串列表
+     */
+    public static List<String> getMonthList(@NotNull Date startDate, @NotNull Date endDate) {
+        checkDateNotNull(startDate, endDate);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM");
+        LocalDate startLocalDate = startDate.toLocalDate().with(TemporalAdjusters.firstDayOfMonth());
+        LocalDate endLocalDate = endDate.toLocalDate().with(TemporalAdjusters.firstDayOfMonth());
+        List<String> resultList = new ArrayList<>();
+
+        for (LocalDate localDate = startLocalDate.plusDays(0); localDate.compareTo(endLocalDate) <= 0;
+             localDate = localDate.plusMonths(1)) {
+            resultList.add(localDate.format(dateTimeFormatter));
+        }
+        return resultList;
+    }
+
+    /**
+     * 获取两个日期之间的周一字符串列表
+     *
+     * @param startDate 开始日期
+     * @param endDate   结束日期
+     * @return 日期之间的字符串列表
+     */
+    public static List<String> getMondayList(@NotNull Date startDate, @NotNull Date endDate) {
+        checkDateNotNull(startDate, endDate);
+        Date firstDayOfWeek = getFirstDayOfWeek(startDate);
+        Date lastDayOfWeek = getFirstDayOfWeek(endDate);
+        List<String> resultList = new ArrayList<>();
+
+        LocalDate statLocalDate = firstDayOfWeek.toLocalDate();
+        LocalDate endLocalDate = lastDayOfWeek.toLocalDate();
+        for (LocalDate localDate = statLocalDate.plusDays(0); localDate.compareTo(endLocalDate) <= 0; localDate = localDate.plusWeeks(1)) {
+            resultList.add(localDate.toString());
+        }
+        return resultList;
+    }
+
+    /**
+     * 获取所属周的第一天
+     *
+     * @param date 日期
+     * @return 获取日期所属周一
+     */
+    public static Date getFirstDayOfWeek(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        return Date.valueOf(localDate.with(DayOfWeek.MONDAY));
+    }
+
+    /**
+     * 获取所属周的最后一天
+     *
+     * @param date 日期
+     * @return 获取日期所属周的最后一天
+     */
+    public static Date getLastDayOfWeek(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        return Date.valueOf(localDate.with(DayOfWeek.SUNDAY));
+    }
+
+    /**
+     * 获取日期所属月份的第一天
+     *
+     * @param date 日期
+     * @return 获取日期所属月份的第一天
+     */
+    public static Date getFirstDayOfMonth(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        return Date.valueOf(localDate.with(TemporalAdjusters.firstDayOfMonth()));
+    }
+
+    /**
+     * 获取日期所属月份的最后一天
+     *
+     * @param date 日期
+     * @return 获取日期所属月份的最后一天
+     */
+    public static Date getLastDayOfMonth(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        return Date.valueOf(localDate.with(TemporalAdjusters.lastDayOfMonth()));
+    }
+
+    /**
+     * 获取日期所属季度的第一天
+     *
+     * @param date 日期
+     * @return 日期所属季度的第一天
+     */
+    public static Date getFirstDayOfQuarter(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        LocalDate firstDayOfQuarter = localDate.with(localDate.getMonth().firstMonthOfQuarter())
+                .with(TemporalAdjusters.firstDayOfMonth());
+        return Date.valueOf(firstDayOfQuarter);
+    }
+
+    /**
+     * 获取日期所属季度的最后一天
+     *
+     * @param date 日期
+     * @return 日期所属季度的最后一天
+     */
+    public static Date getLastDayOfQuarter(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        Month month = localDate.getMonth().firstMonthOfQuarter().plus(QUARTER_DIFF_MONTHS);
+        LocalDate lastDayOfQuarter = localDate.with(month)
+                .with(TemporalAdjusters.lastDayOfMonth());
+        return Date.valueOf(lastDayOfQuarter);
+    }
+
+    /**
+     * 获取日期所属年第一天
+     *
+     * @param date 日期
+     * @return 日期所属年第一天
+     */
+    public static Date getFirstDayOfYear(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        LocalDate fistLocalDateOfYear = localDate.with(TemporalAdjusters.firstDayOfYear());
+        return Date.valueOf(fistLocalDateOfYear);
+    }
+
+    /**
+     * 获取日期所属年最后一天
+     *
+     * @param date 日期
+     * @return 日期所属年最后一天
+     */
+    public static Date getLastDayOfYear(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        LocalDate lastLocalDateOfYear = localDate.with(TemporalAdjusters.lastDayOfYear());
+        return Date.valueOf(lastLocalDateOfYear);
+    }
+
+    /**
+     * 根据日期获取季度 格式: yyyy-Q1
+     *
+     * @param date 日期
+     * @return 季度
+     */
+    public static String getYearQuarterByDate(@NotNull Date date) {
+        Objects.requireNonNull(date, "date");
+        LocalDate localDate = date.toLocalDate();
+        Month month = localDate.getMonth();
+        int year = localDate.getYear();
+        QuarterEnum quarterEnum;
+        switch (month) {
+            case JANUARY:
+            case FEBRUARY:
+            case MARCH:
+                quarterEnum = QuarterEnum.Q1;
+                break;
+            case APRIL:
+            case MAY:
+            case JUNE:
+                quarterEnum = QuarterEnum.Q2;
+                break;
+            case JULY:
+            case AUGUST:
+            case SEPTEMBER:
+                quarterEnum = QuarterEnum.Q3;
+                break;
+            default:
+                quarterEnum = QuarterEnum.Q4;
+        }
+        return String.format("%s%s%s", year, "-", quarterEnum);
+    }
+
+    /**
+     * 校验日期不为null
+     *
+     * @param startDate 开始日期
+     * @param endDate   结束日期
+     */
+    private static void checkDateNotNull(Date startDate, Date endDate) {
+        Objects.requireNonNull(startDate, "startDate");
+        Objects.requireNonNull(endDate, "endDate");
+    }
 }

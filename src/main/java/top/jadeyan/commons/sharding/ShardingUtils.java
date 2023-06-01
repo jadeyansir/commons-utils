@@ -418,4 +418,44 @@ public final class ShardingUtils {
     private static int getYearMonthValue(int year, int month) {
         return year * YEAR_MONTH_WIGHT + month;
     }
+
+    /**
+     * 获取pk 同月最小值
+     *
+     * @param currentDate 当前时间
+     * @return 同月最小值pk
+     */
+    public static Long getCurrentMonthMinPk(Date currentDate) {
+        LocalDate currentPkLocalDate = currentDate.toLocalDate();
+        LocalDate endPkLocalDate = currentPkLocalDate.with(TemporalAdjusters.firstDayOfMonth());
+        long endDateValue = Date.valueOf(endPkLocalDate).getTime();
+        return endDateValue * DATE_PAGE_WIGHT;
+    }
+
+    /**
+     * 获取上一月
+     *
+     * @param currentDate 当前时间
+     * @return 上月时间
+     */
+    public static Date getLastMonth(Date currentDate) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+        calendar.add(Calendar.MONTH, -1);
+        java.util.Date utilDate = calendar.getTime();
+        return new Date(utilDate.getTime());
+    }
+
+    /**
+     * 比较开始pk和当月最小的pk大小
+     *
+     * @param currentDate 当前时间
+     * @param startPk     开始pk
+     * @return 最大值pk
+     */
+    public static Long getMaxPk(Date currentDate, long startPk) {
+        long lastMonthMinPk = getCurrentMonthMinPk(currentDate);
+        return Math.max(lastMonthMinPk, startPk);
+    }
 }

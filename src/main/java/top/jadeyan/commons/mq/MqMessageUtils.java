@@ -1,13 +1,18 @@
 package top.jadeyan.commons.mq;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import top.jadeyan.commons.json.JSON;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import top.jadeyan.commons.enums.DataOperationEnum;
+import top.jadeyan.commons.json.JSON;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static top.jadeyan.commons.object.ObjectExtensionUtils.getProperty;
 
 /**
  * mq 消息工具类
@@ -15,6 +20,7 @@ import java.util.function.Function;
  * @author yan
  */
 public final class MqMessageUtils {
+    private static final Log logger = LogFactory.getLog(MqMessageUtils.class);
 
     private static final String ARRAY_PREFIX = "[";
 
@@ -85,5 +91,35 @@ public final class MqMessageUtils {
             result.add(mqMessage);
         }
         return result;
+    }
+
+    /**
+     * 处理mq数据方法类
+     *
+     * @param mqMessage            mq 消息
+     * @param operationFunctionMap 操作数组
+     * @param messageInfo          需要打印的日志信息
+     */
+    public static <T> void handleMqData(
+            MqMessage<CanalFlatMessageBO<T>> mqMessage,
+            Map<DataOperationEnum, Consumer<Collection<T>>> operationFunctionMap,
+            String messageInfo) {
+        Optional<DataOperationEnum> dataOperationEnumOptional =
+                DataOperationEnum.getDataOperationEnumByText(mqMessage.getMessageBody().getType());
+        if (!dataOperationEnumOptional.isPresent()) {
+            String errMsg = JSON.toJSONString(mqMessage);
+            logger.warn(String.format("[%s] can not resolve operation, message: %s", messageInfo, errMsg));
+            return;
+        }
+        Consumer<Collection<T>> consumer = operationFunctionMap.get(dataOperationEnumOptional.get());
+        if (Objects.isNull(consumer)) {
+            String errMsg = JSON.toJSONString(mqMessage);
+            logger.warn(String.format("[%s] can not find match func, message: %s", messageInfo, errMsg));
+            return;
+        }
+        List<T> dataList = getProperty(mqMessage, MqMessage::getMessageBody, CanalFlatMessageBO::getData);
+        if (CollectionUtils.isNotEmpty(dataList)) {
+            consumer.accept(dataList);
+        }
     }
 }
