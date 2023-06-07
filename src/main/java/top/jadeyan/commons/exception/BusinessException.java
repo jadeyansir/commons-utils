@@ -40,6 +40,11 @@ public class BusinessException extends RuntimeException {
         this.message = message;
     }
 
+    public BusinessException(String message) {
+        this.code = 0;
+        this.message = message;
+    }
+
     @Override
     public String getMessage() {
         return message;
